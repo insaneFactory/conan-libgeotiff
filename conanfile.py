@@ -5,7 +5,7 @@ class LibgeotiffConan(ConanFile):
 	name = "libgeotiff"
 	version = "1.4.2"
 	license = "libgeotiff Licensing"
-	url = "https://github.com/GrobAircraftAG/libgeotiff.git"
+	url = "https://github.com/insaneFactory/libgeotiff.git"
 	description = "This library is designed to permit the extraction and parsing of the GeoTIFF Key directories, as well as definition and installation of GeoTIFF keys in new files."
 	settings = "os", "compiler", "build_type", "arch"
 	generators = "cmake"
