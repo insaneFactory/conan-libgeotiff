@@ -1,5 +1,5 @@
 --- CMakeLists.txt	2016-08-11 17:40:12.000000000 +0200
-+++ CMakeLists.txt	2018-10-30 14:14:12.026045354 +0100
++++ CMakeLists.txt	2018-11-19 15:51:58.483392300 +0100
 @@ -13,7 +13,10 @@
  
  ##############################################################################
@@ -8,7 +8,7 @@
 +CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
 +
 +include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-+conan_basic_setup()
++conan_basic_setup(TARGETS)
  
  SET(CMAKE_COLOR_MAKEFILE ON)
  
@@ -21,10 +21,59 @@
      DOC "Default location of GeoTIFF CSV files"
      NO_DEFAULT_PATH)
  
-@@ -189,26 +192,26 @@
-       FIND_PACKAGE(TIFF REQUIRED)
-     endif ()
+@@ -140,75 +143,27 @@
+ SET(WITH_PROJ4 TRUE CACHE BOOL "Choose if PROJ.4 support should be built")
  
+ IF(WITH_PROJ4)
+-    FIND_PACKAGE(PROJ4 NO_MODULE QUIET)
+-    if (NOT PROJ4_FOUND)
+-      FIND_PACKAGE(PROJ4)
+-    endif ()
+-
+-    IF(PROJ4_FOUND)
+         ADD_DEFINITIONS(-DHAVE_LIBPROJ=1)
+-        INCLUDE_DIRECTORIES(${PROJ4_INCLUDE_DIR})
+-    ENDIF()
+ ENDIF()
+ 
+ # Zlib support - optional, default=OFF
+ SET(WITH_ZLIB FALSE CACHE BOOL "Choose if zlib support should be built")
+ 
+ IF(WITH_ZLIB)
+-    FIND_PACKAGE(ZLIB NO_MODULE QUIET)
+-    if (NOT ZLIB_FOUND)
+-      FIND_PACKAGE(ZLIB)
+-    endif ()
+-
+-    IF(ZLIB_FOUND)
+         SET(HAVE_ZIP 1)
+-        INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIR})
+         ADD_DEFINITIONS(-DHAVE_ZIP=${HAVE_ZIP})
+-    ENDIF()
+ ENDIF()
+ 
+ # JPEG support - optional, default=OFF
+ SET(WITH_JPEG FALSE CACHE BOOL "Choose if JPEG support should be built")
+ 
+ IF(WITH_JPEG)
+-    FIND_PACKAGE(JPEG NO_MODULE QUIET)
+-    if (NOT JPEG_FOUND)
+-      FIND_PACKAGE(JPEG)
+-    endif ()
+-
+-    IF(JPEG_FOUND)
+         SET(HAVE_JPEG 1)
+-        INCLUDE_DIRECTORIES(${JPEG_INCLUDE_DIR})
+         ADD_DEFINITIONS(-DHAVE_JPEG=${HAVE_JPEG})
+-    ENDIF()
+ ENDIF()
+ 
+ IF(WITH_TIFF)
+-    FIND_PACKAGE(TIFF NO_MODULE QUIET)
+-    if (NOT TIFF_FOUND)
+-      FIND_PACKAGE(TIFF REQUIRED)
+-    endif ()
+-
 -    IF(TIFF_FOUND)
 -        # Confirm required API is available
 -        INCLUDE(CheckFunctionExists)
@@ -43,28 +92,39 @@
 -        ENDIF()
 -
 -        INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
--        ADD_DEFINITIONS(-DHAVE_TIFF=1)
+         ADD_DEFINITIONS(-DHAVE_TIFF=1)
 -    ENDIF(TIFF_FOUND)
-+#    IF(TIFF_FOUND)
-+#        # Confirm required API is available
-+#        INCLUDE(CheckFunctionExists)
-+#        SET(CMAKE_REQUIRED_LIBRARIES ${TIFF_LIBRARIES})
-+#
-+#        CHECK_FUNCTION_EXISTS(TIFFOpen HAVE_TIFFOPEN)
-+#        IF(NOT HAVE_TIFFOPEN)
-+#            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
-+#            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFOpen function not found")
-+#        ENDIF()
-+#
-+#        CHECK_FUNCTION_EXISTS(TIFFMergeFieldInfo HAVE_TIFFMERGEFIELDINFO)
-+#        IF(NOT HAVE_TIFFMERGEFIELDINFO)
-+#            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
-+#            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFMergeFieldInfo function not found. libtiff 3.6.0 Beta or later required. Please upgrade or use an older version of libgeotiff")
-+#        ENDIF()
-+#
-+#        INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
-+#        ADD_DEFINITIONS(-DHAVE_TIFF=1)
-+#    ENDIF(TIFF_FOUND)
  ENDIF(WITH_TIFF)
  
  # Turn off TOWGS84 support
+@@ -467,11 +422,25 @@
+ SET_TARGET_PROPERTIES(${GEOTIFF_LIBRARY_TARGET} PROPERTIES
+    OUTPUT_NAME ${GEOTIFF_LIB_NAME})
+ 
+-TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET}
+-    ${TIFF_LIBRARIES}
+-    ${PROJ4_LIBRARIES}
+-    ${ZLIB_LIBRARIES}
+-    ${JPEG_LIBRARIES})
++IF(WITH_PROJ4)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::proj4)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::proj4)
++ENDIF(WITH_PROJ4)
++
++IF(WITH_ZLIB)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::zlib)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::zlib)
++ENDIF(WITH_ZLIB)
++
++IF(WITH_JPEG)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::libjpeg-turbo)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::libjpeg-turbo)
++ENDIF(WITH_JPEG)
++
++IF(WITH_TIFF)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::libtiff)
++    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::libtiff)
++ENDIF(WITH_TIFF)
+ 
+ # INSTALL(TARGETS ${GEOTIFF_ARCHIVE_TARGET} ${GEOTIFF_LIBRARY_TARGET}
+ #	RUNTIME DESTINATION ${GEOTIFF_BIN_DIR}

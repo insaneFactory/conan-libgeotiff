@@ -1,4 +1,5 @@
 from conans import ConanFile, CMake, tools
+import codecs, os
 
 
 class LibgeotiffConan(ConanFile):
@@ -31,7 +32,11 @@ class LibgeotiffConan(ConanFile):
 		"towgs84": True,
 		"utilities": True
 	}
-	
+
+	def configure(self):
+		if self.settings.compiler == "Visual Studio":
+			del self.options.fPIC
+
 	def requirements(self):
 		if self.options.tiff:
 			self.requires("libtiff/4.0.9@bincrafters/stable")
@@ -39,9 +44,14 @@ class LibgeotiffConan(ConanFile):
 			self.requires("proj4/5.2.0@insanefactory/stable")
 
 	def source(self):
-		tools.get("https://download.osgeo.org/geotiff/libgeotiff/libgeotiff-%s.tar.gz" % self.version)
+		# Download source and rename source directory.
+		tools.get("http://download.osgeo.org/geotiff/libgeotiff/libgeotiff-%s.tar.gz" % self.version)
 		os.rename("libgeotiff-%s" % self.version, self.source_subfolder)
-		tools.patch(base_path="src", patch_file="CMakeLists.patch")
+		
+		# Patch CMake files.
+		tools.patch(base_path=self.source_subfolder, patch_file="CMakeLists.patch")
+		with codecs.open("%s/libxtiff/CMakeLists.txt" % self.source_subfolder, "a", encoding="utf-8") as f:
+			f.write("TARGET_LINK_LIBRARIES(xtiff CONAN_PKG::libtiff)")
 
 	def build(self):
 		cmake = CMake(self)
@@ -67,6 +77,7 @@ class LibgeotiffConan(ConanFile):
 			self.copy("*.a", dst="lib", keep_path=False)
 
 	def package_info(self):
-		self.cpp_info.libs = ["geotiff"]
+		needDebugSuffix = self.settings.os == "Windows" and self.settings.build_type == "Debug"
+		self.cpp_info.libs = ["geotiff_d" if needDebugSuffix else "geotiff"]
 		if not self.options.shared:
-			self.cpp_info.libs.append("xtiff")
+			self.cpp_info.libs.append("xtiff_d" if needDebugSuffix else "xtiff")
