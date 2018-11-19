@@ -1,0 +1,70 @@
+--- CMakeLists.txt	2016-08-11 17:40:12.000000000 +0200
++++ CMakeLists.txt	2018-10-30 14:14:12.026045354 +0100
+@@ -13,7 +13,10 @@
+ 
+ ##############################################################################
+ # CMake settings
+-CMAKE_MINIMUM_REQUIRED(VERSION 2.6.0)
++CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
++
++include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
++conan_basic_setup()
+ 
+ SET(CMAKE_COLOR_MAKEFILE ON)
+ 
+@@ -114,7 +117,7 @@
+ 
+ SET(GEOTIFF_CSV_NAMES area.csv codes.csv datum.csv gcs.csv pcs.csv)
+ FIND_PATH(GEOTIFF_CSV_DATA_DIR NAMES ${GEOTIFF_CSV_NAMES}
+-    PATHS "${CMAKE_SOURCE_DIR}/csv"
++    PATHS "${CMAKE_CURRENT_SOURCE_DIR}/csv"
+     DOC "Default location of GeoTIFF CSV files"
+     NO_DEFAULT_PATH)
+ 
+@@ -189,26 +192,26 @@
+       FIND_PACKAGE(TIFF REQUIRED)
+     endif ()
+ 
+-    IF(TIFF_FOUND)
+-        # Confirm required API is available
+-        INCLUDE(CheckFunctionExists)
+-        SET(CMAKE_REQUIRED_LIBRARIES ${TIFF_LIBRARIES})
+-
+-        CHECK_FUNCTION_EXISTS(TIFFOpen HAVE_TIFFOPEN)
+-        IF(NOT HAVE_TIFFOPEN)
+-            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
+-            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFOpen function not found")
+-        ENDIF()
+-
+-        CHECK_FUNCTION_EXISTS(TIFFMergeFieldInfo HAVE_TIFFMERGEFIELDINFO)
+-        IF(NOT HAVE_TIFFMERGEFIELDINFO)
+-            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
+-            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFMergeFieldInfo function not found. libtiff 3.6.0 Beta or later required. Please upgrade or use an older version of libgeotiff")
+-        ENDIF()
+-
+-        INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
+-        ADD_DEFINITIONS(-DHAVE_TIFF=1)
+-    ENDIF(TIFF_FOUND)
++#    IF(TIFF_FOUND)
++#        # Confirm required API is available
++#        INCLUDE(CheckFunctionExists)
++#        SET(CMAKE_REQUIRED_LIBRARIES ${TIFF_LIBRARIES})
++#
++#        CHECK_FUNCTION_EXISTS(TIFFOpen HAVE_TIFFOPEN)
++#        IF(NOT HAVE_TIFFOPEN)
++#            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
++#            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFOpen function not found")
++#        ENDIF()
++#
++#        CHECK_FUNCTION_EXISTS(TIFFMergeFieldInfo HAVE_TIFFMERGEFIELDINFO)
++#        IF(NOT HAVE_TIFFMERGEFIELDINFO)
++#            SET(TIFF_FOUND) # ReSET to NOT found for TIFF library
++#            MESSAGE(FATAL_ERROR "Failed to link with libtiff - TIFFMergeFieldInfo function not found. libtiff 3.6.0 Beta or later required. Please upgrade or use an older version of libgeotiff")
++#        ENDIF()
++#
++#        INCLUDE_DIRECTORIES(${TIFF_INCLUDE_DIR})
++#        ADD_DEFINITIONS(-DHAVE_TIFF=1)
++#    ENDIF(TIFF_FOUND)
+ ENDIF(WITH_TIFF)
+ 
+ # Turn off TOWGS84 support
