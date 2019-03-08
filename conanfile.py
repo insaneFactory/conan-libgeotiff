@@ -38,6 +38,8 @@ class LibgeotiffConan(ConanFile):
 			del self.options.fPIC
 
 	def requirements(self):
+		if self.options.zlib:
+			self.requires("zlib/1.2.11@conan/stable")
 		if self.options.tiff:
 			self.requires("libtiff/4.0.9@bincrafters/stable")
 		if self.options.proj4:
