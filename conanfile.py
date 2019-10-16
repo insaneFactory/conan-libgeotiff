@@ -83,3 +83,4 @@ class LibgeotiffConan(ConanFile):
 		self.cpp_info.libs = ["geotiff_d" if needDebugSuffix else "geotiff"]
 		if not self.options.shared:
 			self.cpp_info.libs.append("xtiff")
+		self.cpp_info.includedirs = ["include", "include/libxtiff"]
