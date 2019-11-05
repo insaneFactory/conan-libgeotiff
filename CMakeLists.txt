@@ -9,11 +9,10 @@ PROJECT(GeoTIFF)
 
 SET(GEOTIFF_LIB_NAME geotiff)
 SET(GEOTIFF_LIBRARY_TARGET geotiff_library)
-SET(GEOTIFF_ARCHIVE_TARGET geotiff_archive)
 
 ##############################################################################
 # CMake settings
-CMAKE_MINIMUM_REQUIRED(VERSION 3.8.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
@@ -22,18 +21,18 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 
 # Version information
 set(PROJECT_VERSION_MAJOR 1)
-set(PROJECT_VERSION_MINOR 4)
-set(PROJECT_VERSION_PATCH 2)
+set(PROJECT_VERSION_MINOR 5)
+set(PROJECT_VERSION_PATCH 1)
 set(PROJECT_VERSION
   "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 set(GeoTIFF_VERSION ${PROJECT_VERSION})
 
 # Set library version to match that of autoconf:
-# libgeotiff.so -> libgeotiff.so.2.1.1
-# libgeotiff.so.2 -> libgeotiff.so.2.1.2
-# libgeotiff.so.2.1.2
-set(LINK_SOVERSION "2")
-set(LINK_VERSION "2.1.2")
+# libgeotiff.so -> libgeotiff.so.2.2.0
+# libgeotiff.so.2 -> libgeotiff.so.2.2.0
+# libgeotiff.so.2.2.0
+set(LINK_SOVERSION "5")
+set(LINK_VERSION "5.0.0")
 
 string (TOLOWER ${PROJECT_NAME} PROJECT_NAME_LOWER)
 string (TOUPPER ${PROJECT_NAME} PROJECT_NAME_UPPER)
@@ -115,19 +114,6 @@ CHECK_INCLUDE_FILES(strings.h HAVE_STRINGS_H)
 ###############################################################################
 # User-defined build settings
 
-SET(GEOTIFF_CSV_NAMES area.csv codes.csv datum.csv gcs.csv pcs.csv)
-FIND_PATH(GEOTIFF_CSV_DATA_DIR NAMES ${GEOTIFF_CSV_NAMES}
-    PATHS "${CMAKE_CURRENT_SOURCE_DIR}/csv"
-    DOC "Default location of GeoTIFF CSV files"
-    NO_DEFAULT_PATH)
-
-IF(IS_DIRECTORY ${GEOTIFF_CSV_DATA_DIR} AND EXISTS "${GEOTIFF_CSV_DATA_DIR}/gcs.csv")
-    MESSAGE(STATUS "Found GeoTIFF CSV files in: ${GEOTIFF_CSV_DATA_DIR}")
-    ADD_DEFINITIONS(-DCSV_DATA_DIR="${GEOTIFF_CSV_DATA_DIR}")
-ELSE()
-    MESSAGE(FATAL_ERROR "Failed to find GeoTIFF CSV files in: ${GEOTIFF_CSV_DATA_DIR}")
-ENDIF()
-
 SET(WITH_UTILITIES TRUE CACHE BOOL "Choose if GeoTIFF utilities should be built")
 
 ###############################################################################
@@ -138,13 +124,6 @@ INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/libxtiff)
 
 # TIFF support - required, default=ON
 SET(WITH_TIFF TRUE CACHE BOOL "Choose if TIFF support should be built")
-
-# PROJ.4 support - optional, default=ON
-SET(WITH_PROJ4 TRUE CACHE BOOL "Choose if PROJ.4 support should be built")
-
-IF(WITH_PROJ4)
-        ADD_DEFINITIONS(-DHAVE_LIBPROJ=1)
-ENDIF()
 
 # Zlib support - optional, default=OFF
 SET(WITH_ZLIB FALSE CACHE BOOL "Choose if zlib support should be built")
@@ -186,41 +165,6 @@ MESSAGE(STATUS "Generating geo_config.h header - done")
 
 ###############################################################################
 # Installation settings
-
-SET(GEOTIFF_CSV_DATA
-    csv/alias.csv
-    csv/area.csv
-    csv/change.csv
-    csv/compdcs.csv
-    csv/coordinate_axis.csv
-    csv/coordinate_axis_name.csv
-    csv/coordinate_operation.csv
-    csv/coordinate_operation_method.csv
-    csv/coordinate_operation_parameter.csv
-    csv/coordinate_operation_parameter_value.csv
-    csv/coordinate_operation_path.csv
-    csv/coordinate_reference_system.csv
-    csv/coordinate_system.csv
-    csv/datum.csv
-    csv/datum_shift.csv
-    csv/datum_shift_pref.csv
-    csv/deprecation.csv
-    csv/ellipsoid.csv
-    csv/esri_datum_override.csv
-    csv/gcs.csv
-    csv/gcs.override.csv
-    csv/geoccs.csv
-    csv/naming_system.csv
-    csv/pcs.csv
-    csv/pcs.override.csv
-    csv/prime_meridian.csv
-    csv/projop_wparm.csv
-    csv/stateplane.csv
-    csv/supersession.csv
-    csv/unit_of_measure.csv
-    csv/version_history.csv
-    csv/vertcs.csv
-    csv/vertcs.override.csv )
 
 SET(GEOTIFF_LIB_HEADERS
     geotiff.h
@@ -297,10 +241,6 @@ INSTALL(FILES
     DESTINATION doc)
 #    DESTINATION ${GEOTIFF_DATA_DIR}/doc)
 
-# Install CSV data files
-# INSTALL(FILES ${GEOTIFF_CSV_DATA} DESTINATION ${GEOTIFF_DATA_DIR}/epsg_csv)
-INSTALL(FILES ${GEOTIFF_CSV_DATA} DESTINATION share/epsg_csv)
-
 # Install man pages
 INSTALL(FILES ${GEOTIFF_MAN_PAGES} DESTINATION share/man/man1)
 
@@ -319,7 +259,6 @@ ADD_SUBDIRECTORY(libxtiff)
 
 SET(GEOTIFF_LIB_SOURCES
     cpl_serv.c
-    cpl_csv.c
     geo_extra.c
     geo_free.c
     geo_get.c
@@ -334,68 +273,20 @@ SET(GEOTIFF_LIB_SOURCES
     geo_write.c
     geotiff_proj4.c)
 
-SET(INCODE_EPSG_FROM_CSV FALSE CACHE BOOL "Build source-encoded EPSG data files")
-
-FOREACH(epsg_csv_file ${GEOTIFF_CSV_DATA})
-    # We cannot use NAME_WE without string-replace, because that would
-    # give "gcs.csv" and "gcs.override.csv" the same epsg_csv_name
-    GET_FILENAME_COMPONENT(epsg_csv_name "${epsg_csv_file}" NAME)
-    STRING(REPLACE ".csv" "" epsg_csv_basename "${epsg_csv_name}")
-    # SET(INCODE_EPSG_FROM_CSV_${epsg_csv_basename} FALSE CACHE BOOL "Build ${epsg_csv_basename} file target")
-
-    # IF(INCODE_EPSG_FROM_CSV_${epsg_csv_basename})
-    if( INCODE_EPSG_FROM_CSV)
-        SET(epsg_source_name "${CMAKE_CURRENT_BINARY_DIR}/incode_epsg_${epsg_csv_basename}.c")
-        LIST(APPEND GEOTIFF_LIB_CSV_SOURCES "${epsg_source_name}")
-
-        # sanitize .'s out of struct names
-        STRING(REGEX REPLACE "\\." "_" STRUCT_NAME ${epsg_csv_basename})
-        LIST(APPEND epsg_includefile_externconst "\nextern const datafile_rows_t *${STRUCT_NAME}_rows[]")
-        LIST(APPEND epsg_includefile_pointer_list "  { \"${STRUCT_NAME}\", ${STRUCT_NAME}_rows },")
-        MESSAGE(STATUS "Creating buildrule to convert ${epsg_csv_basename}.csv to ${epsg_csv_basename}.c and include it in code.")
-        ADD_CUSTOM_COMMAND(OUTPUT "${epsg_source_name}"
-            COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/csv/csv2c.py" "${CMAKE_CURRENT_SOURCE_DIR}/${epsg_csv_file}" "${epsg_source_name}"
-            DEPENDS "${epsg_csv_file}"
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            VERBATIM)
-    ENDIF()
-ENDFOREACH()
-
-SET(EPSG_INCODE_EXPLANATION
-    "This file is autogenerated by CMake, based on the INCODE_EPSG_* options specified during configure.\n
-    Choosing an EPSG CSV file for inclusion into code will run csv/csv2c.py on the file and include the\n
-    resulting c-source as a build target, as opposed to using GDAL_DATA-dir to find the EPSG codes at runtime.")
-STRING(REPLACE ";" "\n" EPSG_INCLUDEFILE_POINTER_STRING "${epsg_includefile_pointer_list}")
-FILE(WRITE "${CMAKE_CURRENT_BINARY_DIR}/epsg_incode_header.h"
-    "/* ${EPSG_INCODE_EXPLANATION} */\n${epsg_includefile_externconst}; \n\n/* Pointers to csv data included in code */\nstatic const datafile_t files[] = {\n${EPSG_INCLUDEFILE_POINTER_STRING}\n  { NULL, NULL }};")
-
 SET(XTIFF_SOURCES libxtiff/xtiff.c)
 
-#---
-# Static libgeotiff archive
-# NOTE: Did not put XTIFF_SOURCES in static lib because libxtiff.a is written out
-#       currently.
-#---
 if (MSVC OR CMAKE_CONFIGURATION_TYPES)
   # For multi-config systems and for Visual Studio, the debug versions
   # of the libraries have a _d suffix.
   set (CMAKE_DEBUG_POSTFIX _d)
 endif ()
 
-ADD_LIBRARY(${GEOTIFF_ARCHIVE_TARGET} STATIC
-    ${GEOTIFF_LIB_SOURCES} ${GEOTIFF_LIB_CSV_SOURCES})
-SET_TARGET_PROPERTIES(${GEOTIFF_ARCHIVE_TARGET} PROPERTIES
-    OUTPUT_NAME ${GEOTIFF_LIB_NAME})
+ADD_LIBRARY(${GEOTIFF_LIBRARY_TARGET}
+    ${GEOTIFF_LIB_SOURCES} ${XTIFF_SOURCES})
 
-# Shared libgeotiff library
-ADD_LIBRARY(${GEOTIFF_LIBRARY_TARGET} SHARED
-    ${GEOTIFF_LIB_SOURCES} ${GEOTIFF_LIB_CSV_SOURCES} ${XTIFF_SOURCES})
-
-# Windows:
 IF(WIN32 AND MSVC)
     SET_TARGET_PROPERTIES(${GEOTIFF_LIBRARY_TARGET} PROPERTIES IMPORT_SUFFIX "_i.lib")
 ENDIF(WIN32 AND MSVC)
-
 
 # Unix, linux:
 IF(UNIX)
@@ -422,24 +313,18 @@ ENDIF(UNIX)
 SET_TARGET_PROPERTIES(${GEOTIFF_LIBRARY_TARGET} PROPERTIES
    OUTPUT_NAME ${GEOTIFF_LIB_NAME})
 
-IF(WITH_PROJ4)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::proj4)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::proj4)
-ENDIF(WITH_PROJ4)
+TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::proj)
 
 IF(WITH_ZLIB)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::zlib)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::zlib)
+    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::ZLIB)
 ENDIF(WITH_ZLIB)
 
 IF(WITH_JPEG)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::libjpeg-turbo)
     TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::libjpeg-turbo)
 ENDIF(WITH_JPEG)
 
 IF(WITH_TIFF)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_ARCHIVE_TARGET} CONAN_PKG::libtiff)
-    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::libtiff)
+    TARGET_LINK_LIBRARIES(${GEOTIFF_LIBRARY_TARGET} CONAN_PKG::TIFF)
 ENDIF(WITH_TIFF)
 
 # INSTALL(TARGETS ${GEOTIFF_ARCHIVE_TARGET} ${GEOTIFF_LIBRARY_TARGET}
@@ -447,7 +332,7 @@ ENDIF(WITH_TIFF)
 #   LIBRARY DESTINATION ${GEOTIFF_LIB_DIR}
 #   ARCHIVE DESTINATION ${GEOTIFF_LIB_DIR})
 
-INSTALL( TARGETS ${GEOTIFF_ARCHIVE_TARGET} ${GEOTIFF_LIBRARY_TARGET}
+INSTALL( TARGETS ${GEOTIFF_LIBRARY_TARGET}
 	 EXPORT depends
 	 RUNTIME DESTINATION bin
          LIBRARY DESTINATION lib
